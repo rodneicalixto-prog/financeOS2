@@ -45,16 +45,33 @@ function normalizeHost(value: string): string {
 }
 
 export async function getProjectByDomain(token: string, domain: string): Promise<VercelProject> {
-  // O app roda na URL do deployment atual. Em muitos imports da Vercel, essa URL
-  // nao tem o mesmo slug do projeto; por isso casamos por nome e por deployments.
+  // O app roda na URL do deployment atual. Em muitos imports da Vercel essa URL
+  // é um alias gerado (ex.: "finance-lemon-alpha.vercel.app") que NÃO bate com o
+  // slug do projeto nem com nenhuma latestDeployments[].url — então casar só por
+  // domínio falha. O sinal mais confiável é o repo Git conectado: como o bootstrap
+  // roda numa function do próprio projeto, a Vercel injeta VERCEL_GIT_REPO_*.
   const cleaned = normalizeHost(domain);
-  // Lista projetos
+  const subdomain = cleaned.split('.')[0];
+
   const list = await vercelFetch(token, 'GET', `/v9/projects?limit=100`);
   if (!list.ok) throw new VercelError(list.status, await list.text(), '/v9/projects');
   const data = (await list.json()) as { projects: VercelProject[] };
-  // Match por nome igual ao subdominio/host ou pela URL de algum deployment.
-  const subdomain = cleaned.split('.')[0];
-  const found = data.projects.find((p) => {
+
+  // 1) Sinal forte e independente de alias: o repositório Git conectado.
+  const repoId = process.env.VERCEL_GIT_REPO_ID;
+  const repoOwner = process.env.VERCEL_GIT_REPO_OWNER?.toLowerCase();
+  const repoSlug = process.env.VERCEL_GIT_REPO_SLUG?.toLowerCase();
+  const repoFull = repoOwner && repoSlug ? `${repoOwner}/${repoSlug}` : undefined;
+  const byGit = data.projects.find((p) => {
+    if (repoId && p.link?.repoId != null && String(p.link.repoId) === String(repoId)) return true;
+    const linkRepo = p.link?.repo?.toLowerCase();
+    // Vercel expõe link.repo ora como "owner/slug", ora como só "slug".
+    return Boolean(linkRepo && (linkRepo === repoFull || linkRepo === repoSlug));
+  });
+  if (byGit) return byGit;
+
+  // 2) Fallback (dev local / sem env Git): casa por nome ou URL de deployment.
+  const byDomain = data.projects.find((p) => {
     const projectName = p.name.toLowerCase();
     const deploymentHosts = p.latestDeployments?.map((d) => normalizeHost(d.url)) ?? [];
     return (
@@ -63,14 +80,13 @@ export async function getProjectByDomain(token: string, domain: string): Promise
       deploymentHosts.includes(cleaned)
     );
   });
-  if (!found) {
-    throw new VercelError(
-      404,
-      `Projeto Vercel deste deployment (${cleaned}) não encontrado. Confira se o token pertence à mesma conta/time do projeto e tente novamente.`,
-      '/v9/projects',
-    );
-  }
-  return found;
+  if (byDomain) return byDomain;
+
+  throw new VercelError(
+    404,
+    `Projeto Vercel deste deployment (${cleaned}) não encontrado. Confira se o token pertence à mesma conta/time do projeto e tente novamente.`,
+    '/v9/projects',
+  );
 }
 
 export async function getProjectById(token: string, id: string): Promise<VercelProject> {
