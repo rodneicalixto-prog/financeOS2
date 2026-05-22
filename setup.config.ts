@@ -28,6 +28,13 @@ export type CredentialField = {
    */
   validate: (value: string) => Promise<ValidationResult>;
   optional?: boolean;
+  /**
+   * Quando setado, o campo vira "base + suffix": o usuário cola/edita só a base
+   * (default = origin atual do deploy) e o wizard acrescenta este suffixo fixo,
+   * exibindo a URL completa pronta pra copiar. Ideal pra OAuth redirect URIs que
+   * precisam terminar num path fixo. O valor salvo na credencial é a URL completa.
+   */
+  originSuffix?: string;
 };
 
 export type SetupConfig = {
@@ -111,11 +118,12 @@ export const setupConfig: SetupConfig = {
     {
       key: 'gmail_redirect_uri',
       label: 'Gmail OAuth Redirect URI',
-      placeholder: 'https://seu-dominio.vercel.app/auth/gmail/callback',
+      placeholder: 'https://seu-dominio.vercel.app',
       inputType: 'url',
+      originSuffix: '/auth/gmail/callback',
       docsUrl: 'https://console.cloud.google.com/apis/credentials',
       helpText:
-        'Mesmo valor configurado em "Authorized redirect URIs" no Google Cloud. Em produção, use a URL final da Vercel terminada em /auth/gmail/callback.',
+        'Já preenchemos com a URL deste deploy. Ajuste a base se usar domínio próprio e copie a URL completa abaixo para colar em "Authorized redirect URIs" no Google Cloud Console.',
       validate: formatOk(
         /^https?:\/\/.+\/auth\/gmail\/callback\/?$/,
         'A URL precisa terminar em "/auth/gmail/callback".',

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { setupConfig } from '../../../../setup.config'
 import { CredentialInput } from '../components/CredentialInput'
+import { OriginSuffixField } from '../components/OriginSuffixField'
 import { WizardLayout } from '../components/WizardLayout'
 
 type FieldStatus = 'idle' | 'pending' | 'ok' | 'error'
@@ -69,20 +70,35 @@ export function Step4AppCreds({ appCreds, onChange, onNext, onBack }: Step4Props
       }
     >
       <div className="space-y-4">
-        {fields.map((field) => (
-          <CredentialInput
-            key={field.key}
-            label={field.label}
-            value={appCreds[field.key] ?? ''}
-            onChange={(v) => onChange(field.key, v)}
-            validate={field.validate}
-            placeholder={field.placeholder}
-            helpText={field.helpText}
-            docsUrl={field.docsUrl}
-            inputType={field.inputType ?? 'text'}
-            onValidation={setStatus(field.key)}
-          />
-        ))}
+        {fields.map((field) =>
+          field.originSuffix ? (
+            <OriginSuffixField
+              key={field.key}
+              label={field.label}
+              suffix={field.originSuffix}
+              value={appCreds[field.key] ?? ''}
+              onChange={(v) => onChange(field.key, v)}
+              validate={field.validate}
+              placeholder={field.placeholder}
+              helpText={field.helpText}
+              docsUrl={field.docsUrl}
+              onValidation={setStatus(field.key)}
+            />
+          ) : (
+            <CredentialInput
+              key={field.key}
+              label={field.label}
+              value={appCreds[field.key] ?? ''}
+              onChange={(v) => onChange(field.key, v)}
+              validate={field.validate}
+              placeholder={field.placeholder}
+              helpText={field.helpText}
+              docsUrl={field.docsUrl}
+              inputType={field.inputType ?? 'text'}
+              onValidation={setStatus(field.key)}
+            />
+          ),
+        )}
         {error && (
           <div className="rounded-xl border border-[#EF4444]/30 bg-[#EF4444]/5 p-4">
             <p className="text-sm text-[#EF4444]">{error}</p>
