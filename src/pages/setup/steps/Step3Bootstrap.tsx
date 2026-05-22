@@ -75,7 +75,14 @@ export function Step3Bootstrap({ core, owner, onComplete, onBack }: Step3Props) 
   async function runAllPhases() {
     setRunning(true)
     setGlobalError(null)
-    const bootstrapBody = { ...core, app_origin: window.location.origin }
+    const bootstrapBody = {
+      supabase_url: core.supabase_url.trim(),
+      supabase_anon_key: core.supabase_anon_key.trim(),
+      supabase_service_role_key: core.supabase_service_role_key.trim(),
+      supabase_pat: core.supabase_pat.trim(),
+      vercel_token: core.vercel_token.trim(),
+      app_origin: window.location.origin,
+    }
 
     // 1-3: chamadas /api/bootstrap?phase=...
     for (const def of PHASE_DEFS.slice(0, 3)) {

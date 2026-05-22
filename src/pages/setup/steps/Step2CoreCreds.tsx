@@ -12,14 +12,25 @@ const validateSupabaseUrl: ValidationFn = async (value) =>
 
 function makeSupabaseKeyValidator(getUrl: () => string, role: 'anon' | 'service'): ValidationFn {
   return async (value) => {
-    if (value.length < 30) {
-      return { ok: false, message: 'Chave muito curta — deve ser um JWT longo.' }
+    const key = value.trim()
+    const isJwt = key.startsWith('eyJ') && key.length >= 30
+    const isPublishable = role === 'anon' && key.startsWith('sb_publishable_') && key.length >= 30
+    const isSecret = role === 'service' && key.startsWith('sb_secret_') && key.length >= 30
+
+    if (!isJwt && !isPublishable && !isSecret) {
+      return {
+        ok: false,
+        message:
+          role === 'anon'
+            ? 'Use a anon public key/JWT ou a publishable key que começa com "sb_publishable_".'
+            : 'Use a service_role key/JWT ou a secret key que começa com "sb_secret_".',
+      }
     }
     const url = getUrl()
     if (!URL_REGEX.test(url)) return { ok: true }
     try {
-      const res = await fetch(`${url.replace(/\/$/, '')}/rest/v1/`, {
-        headers: { apikey: value, Authorization: `Bearer ${value}` },
+      const res = await fetch(`${url.replace(/\/$/, '')}/auth/v1/settings`, {
+        headers: { apikey: key },
       })
       if (res.status === 401 || res.status === 403) {
         return { ok: false, message: `Chave ${role} rejeitada pelo Supabase (${res.status}).` }
