@@ -125,6 +125,10 @@ export function Step3Bootstrap({ core, owner, onComplete, onBack }: Step3Props) 
             email: owner.email,
             password: owner.password,
             name: owner.name,
+            // Envs no Vercel só valem no próximo deploy; manda as creds direto pra
+            // create-owner conseguir falar com o Supabase já nesta primeira run.
+            supabase_url: core.supabase_url.trim(),
+            supabase_service_role_key: core.supabase_service_role_key.trim(),
           }),
         })
         const json = (await res.json()) as Record<string, unknown> & {

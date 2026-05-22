@@ -20,6 +20,11 @@ interface CreateOwnerBody {
   email: string;
   password: string;
   name?: string;
+  // Opcionais: o wizard envia as creds Supabase no body porque, na first-run, as
+  // envs setadas no Vercel pelo bootstrap só ficam vivas no próximo deploy — ler
+  // de process.env aqui daria 503. Mesmo modelo de confiança do /api/bootstrap.
+  supabase_url?: string;
+  supabase_service_role_key?: string;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -42,8 +47,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'weak_password', 'Senha precisa ter pelo menos 8 caracteres.');
   }
 
-  const url = process.env.SUPABASE_URL ?? process.env.VITE_SUPABASE_URL;
-  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url =
+    body.supabase_url?.trim() || process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const serviceRole =
+    body.supabase_service_role_key?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !serviceRole) {
     return jsonError(
       res,
