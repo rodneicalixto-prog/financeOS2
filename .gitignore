@@ -27,6 +27,9 @@ config.local.json
 # Arquivo local de rotação de credenciais — não commitar
 ROTATION_CHECKLIST.md
 
+# Arquivos temporários locais com tokens/credenciais
+private/
+
 # IDE
 .vscode/
 .idea/
