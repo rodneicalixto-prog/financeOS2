@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+
+# Build
+dist/
+
+# Environment variables (todas as variantes)
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+.env.*.local
+.env.supabase
+*.env
+
+# Mantém apenas o template
+!.env.example
+
+# Credenciais e secrets diversos
+*.pem
+*.key
+secrets.json
+credentials.json
+config.local.json
+
+# Arquivo local de rotação de credenciais — não commitar
+ROTATION_CHECKLIST.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/

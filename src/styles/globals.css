@@ -1,0 +1,546 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --bg-primary: #0a0a0f;
+    --bg-card: rgba(15, 18, 35, 0.6);
+    --border-glass: rgba(59, 130, 246, 0.15);
+    --border-glass-hover: rgba(59, 130, 246, 0.45);
+    --border-divider: rgba(59, 130, 246, 0.08);
+    --accent-blue: #3b82f6;
+    --accent-blue-light: #60a5fa;
+    --accent-blue-dark: #2563eb;
+    --text-primary: #f8fafc;
+    --text-secondary: #94a3b8;
+    --text-label: #cbd5e1;
+    --success: #10b981;
+    --error: #ef4444;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+      sans-serif;
+    background-color: #0a0a0f;
+    color: #f8fafc;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Glow sutil no fundo da página inteira */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(59, 130, 246, 0.06), transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(37, 99, 235, 0.04), transparent 50%);
+  }
+
+  #root {
+    position: relative;
+    z-index: 1;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(59, 130, 246, 0.15);
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(59, 130, 246, 0.35);
+  }
+
+  ::selection {
+    background: rgba(59, 130, 246, 0.3);
+    color: #f8fafc;
+  }
+}
+
+@layer components {
+  /* ==========================================================
+     GLASSMORPHISM — BASE
+     ========================================================== */
+  .glass {
+    background: linear-gradient(
+      135deg,
+      rgba(59, 130, 246, 0.08),
+      rgba(59, 130, 246, 0.02)
+    );
+    backdrop-filter: blur(40px) saturate(140%);
+    -webkit-backdrop-filter: blur(40px) saturate(140%);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 16px;
+    box-shadow:
+      0 0 20px rgba(59, 130, 246, 0.06),
+      inset 0 1px 0 rgba(59, 130, 246, 0.1);
+  }
+
+  .glass-card {
+    background: linear-gradient(
+      135deg,
+      rgba(59, 130, 246, 0.08),
+      rgba(59, 130, 246, 0.02)
+    );
+    backdrop-filter: blur(40px) saturate(140%);
+    -webkit-backdrop-filter: blur(40px) saturate(140%);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    border-radius: 16px;
+    box-shadow:
+      0 0 20px rgba(59, 130, 246, 0.06),
+      inset 0 1px 0 rgba(59, 130, 246, 0.1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-card:hover {
+    border-color: rgba(59, 130, 246, 0.45);
+    box-shadow:
+      0 0 30px rgba(59, 130, 246, 0.12),
+      0 0 60px rgba(59, 130, 246, 0.04),
+      inset 0 1px 0 rgba(59, 130, 246, 0.2);
+  }
+
+  .glass-sidebar {
+    background: linear-gradient(
+      180deg,
+      rgba(15, 18, 35, 0.85),
+      rgba(10, 10, 15, 0.95)
+    );
+    backdrop-filter: blur(40px) saturate(150%);
+    -webkit-backdrop-filter: blur(40px) saturate(150%);
+    border-right: 1px solid rgba(59, 130, 246, 0.1);
+  }
+
+  .glass-header {
+    background: rgba(10, 10, 15, 0.7);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border-bottom: 1px solid rgba(59, 130, 246, 0.08);
+  }
+
+  .glass-input {
+    background: rgba(15, 18, 35, 0.5);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(59, 130, 246, 0.15);
+    border-radius: 10px;
+    color: #f8fafc;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .glass-input:focus {
+    outline: none;
+    border-color: rgba(59, 130, 246, 0.5);
+    box-shadow:
+      0 0 0 3px rgba(59, 130, 246, 0.12),
+      0 0 20px rgba(59, 130, 246, 0.08);
+    background: rgba(15, 18, 35, 0.7);
+  }
+
+  .glass-input::placeholder {
+    color: rgba(148, 163, 184, 0.5);
+  }
+
+  /* ==========================================================
+     BOTÕES — GRADIENTE PRIMÁRIO
+     ========================================================== */
+  .btn-primary-gradient {
+    background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+    color: #f8fafc;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:
+      0 0 20px rgba(59, 130, 246, 0.25),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  .btn-primary-gradient:hover:not(:disabled) {
+    background: linear-gradient(135deg, #2563eb, #60a5fa);
+    box-shadow:
+      0 0 30px rgba(59, 130, 246, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+  }
+
+  /* ==========================================================
+     TIPOGRAFIA UTILITÁRIA
+     ========================================================== */
+  .text-label-upper {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #94a3b8;
+  }
+
+  .metric-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: #f8fafc;
+  }
+
+  /* ==========================================================
+     SKELETON
+     ========================================================== */
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgba(59, 130, 246, 0.04) 25%,
+      rgba(59, 130, 246, 0.12) 50%,
+      rgba(59, 130, 246, 0.04) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite linear;
+    border-radius: 8px;
+  }
+
+  /* ==========================================================
+     OVERRIDES — Substitui border/bg branco por azulado
+     para compatibilidade com código legado (border-white/5 etc.)
+     ========================================================== */
+  .border-white\/5 {
+    border-color: rgba(59, 130, 246, 0.08) !important;
+  }
+  .border-white\/10 {
+    border-color: rgba(59, 130, 246, 0.12) !important;
+  }
+  .border-white\/20 {
+    border-color: rgba(59, 130, 246, 0.2) !important;
+  }
+  .bg-white\/5 {
+    background-color: rgba(59, 130, 246, 0.06) !important;
+  }
+  .bg-white\/10 {
+    background-color: rgba(59, 130, 246, 0.1) !important;
+  }
+  .hover\:bg-white\/5:hover {
+    background-color: rgba(59, 130, 246, 0.08) !important;
+  }
+  .hover\:bg-white\/10:hover {
+    background-color: rgba(59, 130, 246, 0.12) !important;
+  }
+  .hover\:border-white\/20:hover {
+    border-color: rgba(59, 130, 246, 0.35) !important;
+  }
+}
+
+@layer utilities {
+  .bg-glow {
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(59, 130, 246, 0.06), transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(37, 99, 235, 0.04), transparent 50%);
+  }
+}
+
+/* ==========================================================
+   WIZARD /setup — design system scoped (não usar fora do wizard)
+   ========================================================== */
+
+.wizard-card-outer {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(40px) saturate(140%);
+  -webkit-backdrop-filter: blur(40px) saturate(140%);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  border-radius: 16px;
+  padding: 48px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+@media (max-width: 640px) {
+  .wizard-card-outer {
+    padding: 24px;
+  }
+}
+
+.wizard-inner-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(59, 130, 246, 0.12);
+  border-radius: 12px;
+  padding: 20px;
+  transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wizard-inner-card:hover {
+  border-color: rgba(59, 130, 246, 0.25);
+}
+
+.wizard-inner-num {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  border: 1.5px solid rgba(59, 130, 246, 0.4);
+  background: transparent;
+  color: #60a5fa;
+  font-size: 14px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.wizard-pill {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(30, 58, 138, 0.4);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 9999px;
+  padding: 4px 12px;
+  color: #60a5fa;
+  font-family: 'JetBrains Mono', 'Inter', ui-monospace, SFMono-Regular, monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.wizard-open-link {
+  color: #60a5fa;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s ease;
+}
+
+.wizard-open-link:hover {
+  color: #85b7eb;
+}
+
+/* CTA primário do wizard — SEM borda, glow ambiental forte. */
+.wizard-cta {
+  background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+  border: none;
+  color: #ffffff;
+  font-weight: 500;
+  font-size: 15px;
+  padding: 16px 32px;
+  border-radius: 12px;
+  box-shadow:
+    0 8px 40px rgba(59, 130, 246, 0.4),
+    0 0 60px rgba(59, 130, 246, 0.2);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  -webkit-appearance: none;
+  outline: none;
+}
+
+.wizard-cta:hover:not(:disabled) {
+  box-shadow:
+    0 8px 50px rgba(59, 130, 246, 0.6),
+    0 0 80px rgba(59, 130, 246, 0.3);
+}
+
+.wizard-cta:focus-visible {
+  outline: 2px solid rgba(96, 165, 250, 0.6);
+  outline-offset: 3px;
+}
+
+.wizard-cta:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+@media (max-width: 640px) {
+  .wizard-cta {
+    width: 100%;
+  }
+}
+
+/* Secondary button: ghost com hover sutil. Sem glow. */
+.wizard-secondary {
+  background: transparent;
+  border: 1px solid rgba(59, 130, 246, 0.15);
+  color: #cbd5e1;
+  font-weight: 500;
+  font-size: 14px;
+  padding: 14px 24px;
+  border-radius: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  outline: none;
+}
+
+.wizard-secondary:hover:not(:disabled) {
+  border-color: rgba(59, 130, 246, 0.4);
+  color: #ffffff;
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.wizard-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Input do wizard — sobrescreve glass-input com radius/padding do spec. */
+.wizard-input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #f8fafc;
+  font-size: 14px;
+  width: 100%;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+}
+
+.wizard-input::placeholder {
+  color: #94a3b8;
+}
+
+.wizard-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.wizard-input--ok {
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+.wizard-input--error {
+  border-color: rgba(239, 68, 68, 0.45);
+}
+
+.wizard-field-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #cbd5e1;
+  margin-bottom: 6px;
+}
+
+.wizard-h1 {
+  font-size: 28px;
+  font-weight: 600;
+  color: #f8fafc;
+  margin: 0 0 8px;
+  line-height: 1.2;
+}
+
+@media (max-width: 640px) {
+  .wizard-h1 {
+    font-size: 24px;
+  }
+}
+
+.wizard-subtitle {
+  font-size: 16px;
+  font-weight: 400;
+  color: #94a3b8;
+  line-height: 1.6;
+  margin: 0 0 32px;
+}
+
+/* Step indicator */
+.wizard-step-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+}
+
+.wizard-step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.wizard-step-circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wizard-step-circle--future {
+  border: 1.5px solid rgba(59, 130, 246, 0.3);
+  background: transparent;
+  color: #94a3b8;
+}
+
+.wizard-step-circle--done {
+  background: #1e3a8a;
+  color: #ffffff;
+  border: 1.5px solid #1e3a8a;
+}
+
+.wizard-step-circle--active {
+  background: #3b82f6;
+  color: #ffffff;
+  border: 1.5px solid #3b82f6;
+  box-shadow: 0 0 30px rgba(59, 130, 246, 0.5);
+}
+
+.wizard-step-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #94a3b8;
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wizard-step-label--active {
+  color: #f8fafc;
+}
+
+.wizard-step-connector {
+  flex: 1;
+  min-width: 16px;
+  max-width: 64px;
+  height: 0;
+  border-top: 1px solid rgba(59, 130, 246, 0.2);
+  margin: 0 8px;
+  /* Alinha verticalmente com o centro do círculo (label fica abaixo).
+     O item tem círculo 40px + gap 10px + label ~14px. Centro vertical do círculo = 20px do topo. */
+  align-self: flex-start;
+  margin-top: 20px;
+}
