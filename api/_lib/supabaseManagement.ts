@@ -65,18 +65,29 @@ export async function deployFunction(
   pat: string,
   ref: string,
   slug: string,
-  body: string,
+  source: string,
 ): Promise<void> {
-  // Atualização funciona como upsert via PATCH com source no body.
-  // A API aceita raw body (Deno source) com content-type específico.
-  // Se a função não existir, usamos POST; se existir, PATCH.
-  const existing = await mgmtFetch(pat, 'GET', `/projects/${ref}/functions/${slug}`);
-  const method = existing.status === 404 ? 'POST' : 'PATCH';
-  const endpoint =
-    method === 'POST'
-      ? `/projects/${ref}/functions?slug=${encodeURIComponent(slug)}&name=${encodeURIComponent(slug)}&verify_jwt=false`
-      : `/projects/${ref}/functions/${slug}?verify_jwt=false`;
-  const res = await mgmtFetch(pat, method, endpoint, body, 'application/typescript');
+  // Deploy via multipart/form-data no endpoint atual (upsert por slug). O método
+  // antigo (raw body application/typescript em POST/PATCH /functions) foi
+  // descontinuado — era a causa do "0/10 EFs" no bootstrap. Mandamos o `index.ts`
+  // já com os _shared inlined pelo edgeBundler.
+  const endpoint = `/projects/${ref}/functions/deploy?slug=${encodeURIComponent(slug)}`;
+  const form = new FormData();
+  form.append(
+    'metadata',
+    new Blob(
+      [JSON.stringify({ name: slug, entrypoint_path: 'index.ts', verify_jwt: false })],
+      { type: 'application/json' },
+    ),
+  );
+  form.append('file', new Blob([source], { type: 'application/typescript' }), 'index.ts');
+
+  // NÃO setar Content-Type manualmente: o fetch injeta o boundary do multipart.
+  const res = await fetch(`${BASE}${endpoint}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${pat}` },
+    body: form,
+  });
   if (!res.ok) {
     const txt = await res.text();
     throw new MgmtError(res.status, txt, endpoint);

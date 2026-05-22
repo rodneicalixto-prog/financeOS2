@@ -233,6 +233,16 @@ async function phaseDeploy(body: BootstrapBody) {
     { onConflict: 'step' },
   );
 
+  // Falha ALTO se alguma EF não deployou. Antes a fase ficava verde com 0/10 e o
+  // erro só aparecia depois como "Failed to send a request to the Edge Function"
+  // (ex.: ao conectar o Gmail). Os deploys são idempotentes — no retry, as EFs
+  // já gravadas em _bootstrap_state são puladas.
+  const failed = deployResults.filter((r) => !r.ok);
+  if (failed.length > 0) {
+    const detail = failed.map((f) => `${f.slug}: ${f.error}`).join(' | ');
+    throw new Error(`Falha ao deployar ${failed.length}/${slugs.length} Edge Functions. ${detail}`);
+  }
+
   // 5. Setar envs no Vercel.
   const project = await getProjectByDomain(body.vercel_token, body.app_origin);
   const envs: Record<string, string> = {
