@@ -37,20 +37,36 @@ export interface VercelProject {
   latestDeployments?: Array<{ id: string; url: string; readyState: string }>;
 }
 
+function normalizeHost(value: string): string {
+  return value
+    .replace(/^https?:\/\//, '')
+    .replace(/\/.*$/, '')
+    .toLowerCase();
+}
+
 export async function getProjectByDomain(token: string, domain: string): Promise<VercelProject> {
-  // Tenta primeiro como nome de projeto (ex: my-app), depois lista e match por domain.
-  const cleaned = domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+  // O app roda na URL do deployment atual. Em muitos imports da Vercel, essa URL
+  // nao tem o mesmo slug do projeto; por isso casamos por nome e por deployments.
+  const cleaned = normalizeHost(domain);
   // Lista projetos
   const list = await vercelFetch(token, 'GET', `/v9/projects?limit=100`);
   if (!list.ok) throw new VercelError(list.status, await list.text(), '/v9/projects');
   const data = (await list.json()) as { projects: VercelProject[] };
-  // Match por nome igual ao subdomínio ou por algum domínio listado
+  // Match por nome igual ao subdominio/host ou pela URL de algum deployment.
   const subdomain = cleaned.split('.')[0];
-  const found = data.projects.find((p) => p.name === subdomain || p.name === cleaned);
+  const found = data.projects.find((p) => {
+    const projectName = p.name.toLowerCase();
+    const deploymentHosts = p.latestDeployments?.map((d) => normalizeHost(d.url)) ?? [];
+    return (
+      projectName === subdomain ||
+      projectName === cleaned ||
+      deploymentHosts.includes(cleaned)
+    );
+  });
   if (!found) {
     throw new VercelError(
       404,
-      `Projeto "${subdomain}" não encontrado. Confira o VERCEL_TOKEN e tente novamente.`,
+      `Projeto Vercel deste deployment (${cleaned}) não encontrado. Confira se o token pertence à mesma conta/time do projeto e tente novamente.`,
       '/v9/projects',
     );
   }
