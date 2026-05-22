@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { Timeline, type TimelineStatus } from '../components/Timeline'
 import { WizardLayout } from '../components/WizardLayout'
 import type { CoreCreds, WizardState } from '../hooks/useWizardState'
@@ -75,6 +76,23 @@ export function Step3Bootstrap({ core, owner, onComplete, onBack }: Step3Props) 
   async function runAllPhases() {
     setRunning(true)
     setGlobalError(null)
+
+    // Re-run pós-setup: o gate do /api/bootstrap exige JWT de owner quando o
+    // setup já terminou. Anexa o token da sessão se houver (na first-run o app
+    // ainda está cru — supabase é um stub que lança, então só tentamos se já
+    // configurado). Sem token, segue anônimo (first-run, gate permite).
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+    if (isSupabaseConfigured) {
+      try {
+        const { data } = await supabase.auth.getSession()
+        if (data.session?.access_token) {
+          headers.Authorization = `Bearer ${data.session.access_token}`
+        }
+      } catch {
+        /* sem sessão — segue sem Authorization */
+      }
+    }
+
     const bootstrapBody = {
       supabase_url: core.supabase_url.trim(),
       supabase_anon_key: core.supabase_anon_key.trim(),
@@ -90,7 +108,7 @@ export function Step3Bootstrap({ core, owner, onComplete, onBack }: Step3Props) 
       try {
         const res = await fetch(`/api/bootstrap?phase=${def.key}`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify(bootstrapBody),
         })
         const json = (await res.json()) as Record<string, unknown> & {
@@ -120,7 +138,7 @@ export function Step3Bootstrap({ core, owner, onComplete, onBack }: Step3Props) 
       try {
         const res = await fetch('/api/create-owner', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             email: owner.email,
             password: owner.password,
