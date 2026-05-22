@@ -14,7 +14,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { handlePreflight, jsonError, jsonOk } from './_lib/http.js';
-import { markBootstrapStep } from './_lib/credentials.js';
 
 interface CreateOwnerBody {
   email: string;
@@ -86,10 +85,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 500, 'supabase_auth_error', error.message);
     }
 
-    await markBootstrapStep('owner_created', {
-      user_id: data.user?.id,
-      email: data.user?.email,
-    });
+    // Marca via o admin com creds do body — markBootstrapStep lê process.env, que
+    // ainda não está vivo na first-run. Agora que o owner existe, também marcamos
+    // 'setup_completed': a partir daqui o gate do /api/bootstrap pode exigir JWT de
+    // owner com segurança (antes isso era marcado na fase redeploy, sem owner ainda).
+    const now = new Date().toISOString();
+    await admin.from('_bootstrap_state').upsert(
+      { step: 'owner_created', completed_at: now, metadata: { user_id: data.user?.id, email: data.user?.email } },
+      { onConflict: 'step' },
+    );
+    await admin.from('_bootstrap_state').upsert(
+      { step: 'setup_completed', completed_at: now, metadata: {} },
+      { onConflict: 'step' },
+    );
 
     return jsonOk(res, {
       user: { id: data.user?.id, email: data.user?.email },

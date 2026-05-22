@@ -288,13 +288,9 @@ async function phaseRedeploy(body: BootstrapBody) {
     { onConflict: 'step' },
   );
 
-  // Marca o fim do setup. A partir daqui, o gate no topo do handler exige JWT de
-  // owner para qualquer re-execução. metadata vazio — NUNCA armazenar segredos
-  // aqui (ver migration 00014 + refactor pendente de phaseDeploy).
-  await admin.from('_bootstrap_state').upsert(
-    { step: 'setup_completed', completed_at: new Date().toISOString(), metadata: {} },
-    { onConflict: 'step' },
-  );
+  // NÃO marca 'setup_completed' aqui. O setup só termina de fato quando o owner é
+  // criado (/api/create-owner). Marcar antes criava deadlock: se a criação do owner
+  // falhasse, o gate passava a exigir um JWT de owner que ainda não existia.
 
   return { deployment: dep };
 }
@@ -331,30 +327,39 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .eq('step', 'setup_completed')
       .maybeSingle();
     if (done) {
-      const authHeader = req.headers.authorization;
-      if (!authHeader?.startsWith('Bearer ')) {
-        return jsonError(
-          res,
-          403,
-          'setup_already_completed',
-          'Setup já foi concluído. Autenticação de owner é necessária para re-executar o bootstrap.',
-        );
-      }
-      const userClient = createClient(body.supabase_url, body.supabase_anon_key, {
-        global: { headers: { Authorization: authHeader } },
-        auth: { persistSession: false },
-      });
-      const { data: { user } } = await userClient.auth.getUser();
-      if (!user) {
-        return jsonError(res, 401, 'invalid_jwt', 'Sessão inválida ou expirada.');
-      }
-      const { data: profile } = await probe
+      // Auto-cura de deadlock: 'setup_completed' pode ter sido marcado numa run
+      // que falhou ANTES de criar o owner. Sem owner, o setup não terminou de fato
+      // — libera a re-execução anônima (senão ninguém consegue criar o owner).
+      const { count: ownerCount } = await probe
         .from('fo_users')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle();
-      if ((profile as { role?: string } | null)?.role !== 'owner') {
-        return jsonError(res, 403, 'not_owner', 'Apenas o owner pode re-executar o setup.');
+        .select('id', { count: 'exact', head: true })
+        .eq('role', 'owner');
+      if ((ownerCount ?? 0) > 0) {
+        const authHeader = req.headers.authorization;
+        if (!authHeader?.startsWith('Bearer ')) {
+          return jsonError(
+            res,
+            403,
+            'setup_already_completed',
+            'Setup já foi concluído. Autenticação de owner é necessária para re-executar o bootstrap.',
+          );
+        }
+        const userClient = createClient(body.supabase_url, body.supabase_anon_key, {
+          global: { headers: { Authorization: authHeader } },
+          auth: { persistSession: false },
+        });
+        const { data: { user } } = await userClient.auth.getUser();
+        if (!user) {
+          return jsonError(res, 401, 'invalid_jwt', 'Sessão inválida ou expirada.');
+        }
+        const { data: profile } = await probe
+          .from('fo_users')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle();
+        if ((profile as { role?: string } | null)?.role !== 'owner') {
+          return jsonError(res, 403, 'not_owner', 'Apenas o owner pode re-executar o setup.');
+        }
       }
     }
   } catch (probeErr) {
