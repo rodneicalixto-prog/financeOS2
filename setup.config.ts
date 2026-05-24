@@ -42,6 +42,12 @@ export type SetupConfig = {
   toolSlug: string;
   appCredentials: CredentialField[];
   postBootstrapRedirect: string;
+  /**
+   * Expressão cron do polling de sync de email (agendado no bootstrap via
+   * pg_cron). Default: a cada 30 min, se ausente. Edite aqui (formato cron
+   * padrão) para mudar a frequência — não precisa rodar nada manual.
+   */
+  cronSchedule?: string;
 };
 
 // -----------------------------------------------------------------------------
@@ -80,6 +86,7 @@ export const setupConfig: SetupConfig = {
   toolName: 'FinanceOS',
   toolSlug: 'financeos',
   postBootstrapRedirect: '/',
+  cronSchedule: '*/30 * * * *',
 
   appCredentials: [
     {

@@ -27,6 +27,7 @@ import {
   deployFunction,
   setSecrets,
   extractRef,
+  scheduleEmailSyncCron,
   MgmtError,
 } from './_lib/supabaseManagement.js';
 import {
@@ -45,6 +46,8 @@ interface BootstrapBody {
   supabase_pat: string;
   vercel_token: string;
   app_origin: string;
+  /** Expressão cron do sync de email (do manifesto). Default: a cada 30 min. */
+  cron_schedule?: string;
 }
 
 const CORE_MIGRATION_SLUG = '00013_setup_infra';
@@ -243,6 +246,23 @@ async function phaseDeploy(body: BootstrapBody) {
     throw new Error(`Falha ao deployar ${failed.length}/${slugs.length} Edge Functions. ${detail}`);
   }
 
+  // 4.1 Agendar o pg_cron de sync de email (chama cron-sync-all via pg_net),
+  //     substituindo o setup-cron.sh manual. cron-sync-all já está deployado e o
+  //     CRON_SECRET já foi setado na EF acima. Non-fatal: se o agendamento falhar,
+  //     o setup conclui e o erro fica em _bootstrap_state pra diagnóstico.
+  const cronSchedule = body.cron_schedule || '*/30 * * * *';
+  let syncCron: { ok: boolean; schedule: string; error?: string };
+  try {
+    await scheduleEmailSyncCron(body.supabase_pat, ref, body.supabase_url, cronSecret, cronSchedule);
+    syncCron = { ok: true, schedule: cronSchedule };
+  } catch (err) {
+    syncCron = { ok: false, schedule: cronSchedule, error: err instanceof Error ? err.message : String(err) };
+  }
+  await admin.from('_bootstrap_state').upsert(
+    { step: 'sync_cron_scheduled', completed_at: new Date().toISOString(), metadata: syncCron },
+    { onConflict: 'step' },
+  );
+
   // 5. Setar envs no Vercel.
   const project = await getProjectByDomain(body.vercel_token, body.app_origin);
   const envs: Record<string, string> = {
@@ -279,6 +299,7 @@ async function phaseDeploy(body: BootstrapBody) {
   return {
     edge_functions: { ok: okCount, total: slugs.length, results: deployResults },
     vercel_project: { id: project.id, name: project.name },
+    sync_cron: syncCron,
   };
 }
 

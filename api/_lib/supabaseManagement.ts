@@ -51,6 +51,53 @@ export async function runSql(pat: string, ref: string, sql: string): Promise<unk
   return res.json();
 }
 
+const SYNC_CRON_JOB = 'fo-sync-emails-cron';
+
+/**
+ * Agenda (ou re-agenda) o pg_cron que chama a Edge Function `cron-sync-all` via
+ * pg_net. Substitui o setup-cron.sh manual — roda direto na Management API
+ * durante o bootstrap. Idempotente: derruba o job anterior e recria com o
+ * CRON_SECRET corrente (mantém sincronia com o secret setado na EF nesta run).
+ */
+export async function scheduleEmailSyncCron(
+  pat: string,
+  ref: string,
+  supabaseUrl: string,
+  cronSecret: string,
+  schedule: string,
+): Promise<void> {
+  // O schedule vem do manifesto (setup.config). Guarda contra quebra do literal SQL.
+  if (/['\\;]/.test(schedule)) {
+    throw new Error(`Cron schedule inválido (caracteres proibidos): "${schedule}"`);
+  }
+  const edgeUrl = `${supabaseUrl.replace(/\/+$/, '')}/functions/v1/cron-sync-all`;
+  const sql = `
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+DO $do$
+BEGIN
+  IF EXISTS (SELECT 1 FROM cron.job WHERE jobname = '${SYNC_CRON_JOB}') THEN
+    PERFORM cron.unschedule('${SYNC_CRON_JOB}');
+  END IF;
+END
+$do$;
+SELECT cron.schedule(
+  '${SYNC_CRON_JOB}',
+  '${schedule}',
+  $cron$
+  SELECT net.http_post(
+    url := '${edgeUrl}',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'Authorization', 'Bearer ${cronSecret}'
+    ),
+    body := '{}'::jsonb
+  );
+  $cron$
+);`;
+  await runSql(pat, ref, sql);
+}
+
 export async function listFunctions(pat: string, ref: string): Promise<Array<{ slug: string }>> {
   const res = await mgmtFetch(pat, 'GET', `/projects/${ref}/functions`);
   if (!res.ok) {

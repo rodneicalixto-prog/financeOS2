@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '@/lib/supabase'
+import { setupConfig } from '../../../../setup.config'
 import { Timeline, type TimelineStatus } from '../components/Timeline'
 import { WizardLayout } from '../components/WizardLayout'
 import type { CoreCreds, WizardState } from '../hooks/useWizardState'
@@ -25,7 +26,9 @@ const PHASE_DEFS: PhaseDef[] = [
     detailWhenDone: (m) => {
       const ef = m.edge_functions as { ok?: number; total?: number } | undefined
       const v = m.vercel_project as { name?: string } | undefined
-      return `${ef?.ok ?? '?'}/${ef?.total ?? '?'} EFs · projeto ${v?.name ?? '?'}`
+      const c = m.sync_cron as { ok?: boolean; schedule?: string } | undefined
+      const cron = c ? (c.ok ? ` · cron ${c.schedule}` : ' · cron falhou') : ''
+      return `${ef?.ok ?? '?'}/${ef?.total ?? '?'} EFs · projeto ${v?.name ?? '?'}${cron}`
     },
   },
   {
@@ -100,6 +103,7 @@ export function Step3Bootstrap({ core, owner, onComplete, onBack }: Step3Props) 
       supabase_pat: core.supabase_pat.trim(),
       vercel_token: core.vercel_token.trim(),
       app_origin: window.location.origin,
+      cron_schedule: setupConfig.cronSchedule,
     }
 
     // 1-3: chamadas /api/bootstrap?phase=...
