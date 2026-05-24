@@ -285,6 +285,28 @@ export function useReevaluateScannedEmails() {
   })
 }
 
+/**
+ * Re-tenta com a IA atual e limpa falsos-positivos: chama a Edge Function
+ * reprocess-emails, que re-roda o parser nas transações pendentes auto-extraídas
+ * e remove as que não forem transações de verdade (ex.: newsletters).
+ */
+export function useReprocessFalsePositives() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async (): Promise<{ checked: number; removed: number; errors: number }> => {
+      const { data, error } = await supabase.functions.invoke('reprocess-emails')
+      if (error) throw error
+      return data as { checked: number; removed: number; errors: number }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['scanned-emails'] })
+      queryClient.invalidateQueries({ queryKey: ['scanned-emails-counts'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+}
+
 export function useDeleteEmailRule() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
