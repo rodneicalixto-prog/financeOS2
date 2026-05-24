@@ -201,15 +201,10 @@ async function phaseDeploy(body: BootstrapBody) {
   const deployResults: Array<{ slug: string; ok: boolean; error?: string }> = [];
   for (const slug of slugs) {
     const stepKey = `function:${slug}`;
-    const { data: already } = await admin
-      .from('_bootstrap_state')
-      .select('step')
-      .eq('step', stepKey)
-      .maybeSingle();
-    if (already) {
-      deployResults.push({ slug, ok: true });
-      continue;
-    }
+    // SEMPRE re-deploya (upsert idempotente na Supabase). Antes pulávamos funções
+    // já marcadas em _bootstrap_state — o que travava QUALQUER atualização de
+    // código de EF num re-run (ex.: o cap de emails 50→500 não subia). O mark
+    // continua só como breadcrumb de diagnóstico.
     try {
       const bundled = await bundleEdgeFunction(functionsRoot, slug);
       await deployFunction(body.supabase_pat, ref, slug, bundled);
