@@ -196,7 +196,7 @@ export function Step2CoreCreds({ core, owner, onCoreChange, onOwnerChange, onNex
           value={owner.name}
           onChange={(v) => onOwnerChange({ name: v })}
           validate={validateOwnerName}
-          placeholder="Davi Ribeiro"
+          placeholder="Digite aqui"
           inputType="text"
           autoComplete="name"
           onValidation={setStatus('owner_name')}
