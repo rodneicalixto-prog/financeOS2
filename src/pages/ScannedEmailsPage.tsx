@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Mail, Check, AlertCircle, EyeOff, Inbox, Plus, Zap, RefreshCw, Sparkles } from 'lucide-react'
+import { Mail, Check, AlertCircle, EyeOff, Inbox, Plus, Zap, RefreshCw } from 'lucide-react'
 import clsx from 'clsx'
 import {
   useScannedEmails,
@@ -8,7 +8,7 @@ import {
   type ScannedEmail,
   type ScannedEmailKind,
 } from '@/hooks/useScannedEmails'
-import { useReevaluateScannedEmails, useReprocessFalsePositives } from '@/hooks/useEmailRules'
+import { useReevaluateScannedEmails } from '@/hooks/useEmailRules'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -59,29 +59,7 @@ export function ScannedEmailsPage() {
   const { data: emails, isLoading } = useScannedEmails({ kind: filterKind })
   const updateScanned = useUpdateScannedEmail()
   const reeval = useReevaluateScannedEmails()
-  const reprocess = useReprocessFalsePositives()
   const [reevalMsg, setReevalMsg] = useState<string | null>(null)
-
-  function cleanFalsePositives() {
-    if (
-      !confirm(
-        'Re-tentar com a IA atual e REMOVER falsos-positivos: re-analisa as transações ' +
-          'pendentes geradas por email e exclui as que não são transações de verdade ' +
-          '(ex.: newsletters, notícias). Transações confirmadas não são tocadas. ' +
-          'Pode consumir créditos da sua chave de IA. Continuar?',
-      )
-    )
-      return
-    setReevalMsg(null)
-    reprocess.mutate(undefined, {
-      onSuccess: ({ checked, removed, errors }) =>
-        setReevalMsg(
-          `${removed} falso${removed === 1 ? '' : 's'}-positivo${removed === 1 ? '' : 's'} removido${removed === 1 ? '' : 's'} de ${checked} reavaliada${checked === 1 ? '' : 's'}` +
-            (errors ? ` (${errors} com erro)` : '') + '.',
-        ),
-      onError: (e) => setReevalMsg(e instanceof Error ? e.message : 'Erro ao reprocessar.'),
-    })
-  }
 
   function reevaluate() {
     if (
@@ -156,10 +134,6 @@ export function ScannedEmailsPage() {
             <Button size="sm" variant="secondary" onClick={reevaluate} loading={reeval.isPending}>
               <RefreshCw className="h-4 w-4" />
               Reavaliar com regras
-            </Button>
-            <Button size="sm" variant="secondary" onClick={cleanFalsePositives} loading={reprocess.isPending}>
-              <Sparkles className="h-4 w-4" />
-              Limpar falsos-positivos
             </Button>
           </div>
           {reevalMsg && (

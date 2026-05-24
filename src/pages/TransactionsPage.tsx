@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
-import { Plus, Search, SlidersHorizontal } from 'lucide-react'
+import { Plus, Search, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { useReprocessFalsePositives } from '@/hooks/useEmailRules'
 import { Modal } from '@/components/ui/Modal'
 import { TransactionFeed } from '@/components/dashboard/TransactionFeed'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
@@ -21,6 +22,29 @@ export function TransactionsPage() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [manageTagsOpen, setManageTagsOpen] = useState(false)
   const filterBtnRef = useRef<HTMLButtonElement>(null)
+
+  const reprocess = useReprocessFalsePositives()
+  const [reprocessMsg, setReprocessMsg] = useState<string | null>(null)
+
+  function reavaliarComIA() {
+    if (
+      !confirm(
+        'Reavaliar com IA: re-analisa as transações PENDENTES geradas por email com a IA ' +
+          'atual e remove as que não são transações de verdade (ex.: newsletters, notícias). ' +
+          'Transações confirmadas não são tocadas. Pode consumir créditos da sua chave de IA. Continuar?',
+      )
+    )
+      return
+    setReprocessMsg(null)
+    reprocess.mutate(undefined, {
+      onSuccess: ({ checked, removed, errors }) =>
+        setReprocessMsg(
+          `${removed} removida${removed === 1 ? '' : 's'} de ${checked} reavaliada${checked === 1 ? '' : 's'}` +
+            (errors ? ` (${errors} com erro)` : '') + '.',
+        ),
+      onError: (e) => setReprocessMsg(e instanceof Error ? e.message : 'Erro ao reavaliar.'),
+    })
+  }
 
   function handleSearch(value: string) {
     setSearch(value)
@@ -43,11 +67,21 @@ export function TransactionsPage() {
           <h1 className="text-3xl font-bold tracking-tight text-white">Movimentações</h1>
           <p className="mt-1 text-sm text-slate-400">Registre, edite e filtre suas transações financeiras</p>
         </div>
-        <Button onClick={() => setShowForm(true)}>
-          <Plus className="h-4 w-4" />
-          Nova Transação
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" onClick={reavaliarComIA} loading={reprocess.isPending}>
+            <Sparkles className="h-4 w-4" />
+            Reavaliar com IA
+          </Button>
+          <Button onClick={() => setShowForm(true)}>
+            <Plus className="h-4 w-4" />
+            Nova Transação
+          </Button>
+        </div>
       </div>
+
+      {reprocessMsg && (
+        <p className="rounded-lg bg-accent-blue/10 px-3 py-2 text-sm text-accent-blue">{reprocessMsg}</p>
+      )}
 
       {/* Search + botão de filtro */}
       <div className="flex items-center gap-2">
