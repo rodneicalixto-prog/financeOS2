@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Mail, Check, AlertCircle, EyeOff, Inbox, Plus, Zap } from 'lucide-react'
+import { Mail, Check, AlertCircle, EyeOff, Inbox, Plus, Zap, RefreshCw } from 'lucide-react'
 import clsx from 'clsx'
 import {
   useScannedEmails,
@@ -8,6 +8,7 @@ import {
   type ScannedEmail,
   type ScannedEmailKind,
 } from '@/hooks/useScannedEmails'
+import { useReevaluateScannedEmails } from '@/hooks/useEmailRules'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -57,6 +58,28 @@ export function ScannedEmailsPage() {
   const filterKind = tab === 'all' ? 'all' : tab
   const { data: emails, isLoading } = useScannedEmails({ kind: filterKind })
   const updateScanned = useUpdateScannedEmail()
+  const reeval = useReevaluateScannedEmails()
+  const [reevalMsg, setReevalMsg] = useState<string | null>(null)
+
+  function reevaluate() {
+    if (
+      !confirm(
+        'Reavaliar aplica suas regras atuais às transações PENDENTES geradas por email ' +
+          '(corrige receita/despesa e categoria). Transações já confirmadas não são alteradas. Continuar?',
+      )
+    )
+      return
+    setReevalMsg(null)
+    reeval.mutate(undefined, {
+      onSuccess: ({ updated, checked }) =>
+        setReevalMsg(
+          updated === 0
+            ? `Nenhuma transação pendente casou com as regras (${checked} email${checked === 1 ? '' : 's'} verificado${checked === 1 ? '' : 's'}).`
+            : `${updated} transação${updated === 1 ? '' : 'ões'} pendente${updated === 1 ? '' : 's'} reavaliada${updated === 1 ? '' : 's'} de ${checked} email${checked === 1 ? '' : 's'}.`,
+        ),
+      onError: (e) => setReevalMsg(e instanceof Error ? e.message : 'Erro ao reavaliar.'),
+    })
+  }
 
   function handleIgnore(email: ScannedEmail) {
     updateScanned.mutate({ id: email.id, kind: 'ignored' })
@@ -107,6 +130,16 @@ export function ScannedEmailsPage() {
         <EmailRulesList />
       ) : (
         <>
+          <div className="flex items-center justify-end">
+            <Button size="sm" variant="secondary" onClick={reevaluate} loading={reeval.isPending}>
+              <RefreshCw className="h-4 w-4" />
+              Reavaliar com regras
+            </Button>
+          </div>
+          {reevalMsg && (
+            <p className="rounded-lg bg-accent-blue/10 px-3 py-2 text-sm text-accent-blue">{reevalMsg}</p>
+          )}
+
           {/* Kind filter tabs */}
           <div className="flex flex-wrap gap-2 border-b border-white/10 pb-3">
             {TABS.map((t) => {

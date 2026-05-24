@@ -191,6 +191,100 @@ export function useUpdateEmailRule() {
   })
 }
 
+/**
+ * Reavalia emails já escaneados: re-aplica as regras de direção (force_income/
+ * force_expense) às transações PENDENTES geradas por email, corrigindo
+ * receita/despesa (e categoria, se a regra definir) in-place. Não toca em
+ * transações confirmadas, não apaga nada e não re-roda a IA. Casa contra
+ * remetente + assunto + snippet guardados em fo_scanned_emails.
+ */
+export function useReevaluateScannedEmails() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async (): Promise<{ updated: number; checked: number }> => {
+      if (!user) throw new Error('Não autenticado')
+
+      const { data: rulesData, error: rulesErr } = await supabase
+        .from('fo_email_rules')
+        .select('sender_pattern, subject_pattern, action, category_id')
+        .eq('user_id', user.id)
+        .eq('enabled', true)
+        .in('action', ['force_income', 'force_expense'])
+        .order('created_at', { ascending: true })
+      if (rulesErr) throw rulesErr
+      const rules = rulesData || []
+      if (rules.length === 0) return { updated: 0, checked: 0 }
+
+      const { data: scanned, error: scanErr } = await supabase
+        .from('fo_scanned_emails')
+        .select('transaction_id, from_address, subject, snippet')
+        .eq('user_id', user.id)
+        .eq('kind', 'parsed')
+        .not('transaction_id', 'is', null)
+      if (scanErr) throw scanErr
+
+      const incomeIds: string[] = []
+      const expenseIds: string[] = []
+      const byCategory = new Map<string, string[]>()
+
+      for (const s of scanned || []) {
+        const from = (s.from_address || '').toLowerCase()
+        const text = `${s.subject || ''}\n${s.snippet || ''}`.toLowerCase()
+        const rule = rules.find((r) => {
+          const hasSender = !!r.sender_pattern
+          const hasSubject = !!r.subject_pattern
+          if (!hasSender && !hasSubject) return false
+          const senderOk = !hasSender || from.includes((r.sender_pattern as string).toLowerCase())
+          const subjectOk = !hasSubject || text.includes((r.subject_pattern as string).toLowerCase())
+          return senderOk && subjectOk
+        })
+        const txId = s.transaction_id as string | null
+        if (!rule || !txId) continue
+        if (rule.action === 'force_income') incomeIds.push(txId)
+        else expenseIds.push(txId)
+        if (rule.category_id) {
+          const arr = byCategory.get(rule.category_id as string) || []
+          arr.push(txId)
+          byCategory.set(rule.category_id as string, arr)
+        }
+      }
+
+      const updatedSet = new Set<string>()
+      // Só mexe em transações pendentes (não revisadas pelo usuário).
+      const applyType = async (ids: string[], type: 'income' | 'expense') => {
+        if (ids.length === 0) return
+        const { data } = await supabase
+          .from('fo_transactions')
+          .update({ type })
+          .eq('user_id', user.id)
+          .eq('status', 'pending')
+          .in('id', Array.from(new Set(ids)))
+          .select('id')
+        for (const r of data || []) updatedSet.add(r.id as string)
+      }
+      await applyType(incomeIds, 'income')
+      await applyType(expenseIds, 'expense')
+      for (const [categoryId, ids] of byCategory) {
+        await supabase
+          .from('fo_transactions')
+          .update({ category_id: categoryId })
+          .eq('user_id', user.id)
+          .eq('status', 'pending')
+          .in('id', Array.from(new Set(ids)))
+      }
+
+      return { updated: updatedSet.size, checked: (scanned || []).length }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['scanned-emails'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+}
+
 export function useDeleteEmailRule() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
