@@ -71,26 +71,39 @@ export async function searchEmails(
   query: string,
   maxResults = 50
 ): Promise<GmailMessage[]> {
-  const params = new URLSearchParams({
-    q: query,
-    maxResults: String(maxResults),
-  })
+  // Pagina os resultados (Gmail retorna no máximo 500 por página + nextPageToken)
+  // até atingir o teto `maxResults`. Sem isso, só vínhamos com a 1ª página (50).
+  console.log('[gmail-search] query:', query, '· cap:', maxResults)
 
-  console.log('[gmail-search] query:', query)
+  const out: GmailMessage[] = []
+  const pageSize = Math.min(maxResults, 500)
+  let pageToken: string | undefined
 
-  const response = await fetch(`${GMAIL_API_BASE}/messages?${params}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  })
+  do {
+    const params = new URLSearchParams({ q: query, maxResults: String(pageSize) })
+    if (pageToken) params.set('pageToken', pageToken)
 
-  if (!response.ok) {
-    const errorBody = await response.text()
-    console.error('[gmail-search] API error:', response.status, errorBody)
-    throw new Error(`Gmail API error ${response.status}: ${errorBody}`)
-  }
+    const response = await fetch(`${GMAIL_API_BASE}/messages?${params}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!response.ok) {
+      const errorBody = await response.text()
+      console.error('[gmail-search] API error:', response.status, errorBody)
+      throw new Error(`Gmail API error ${response.status}: ${errorBody}`)
+    }
 
-  const data = await response.json()
-  console.log('[gmail-search] found', data.messages?.length || 0, 'messages')
-  return data.messages || []
+    const data = await response.json()
+    const batch: GmailMessage[] = data.messages || []
+    for (const m of batch) {
+      out.push(m)
+      if (out.length >= maxResults) break
+    }
+    // Para se não há próxima página, página vazia, ou já atingimos o teto.
+    pageToken = batch.length > 0 ? data.nextPageToken : undefined
+  } while (pageToken && out.length < maxResults)
+
+  console.log('[gmail-search] found', out.length, 'messages')
+  return out
 }
 
 export async function getEmailContent(

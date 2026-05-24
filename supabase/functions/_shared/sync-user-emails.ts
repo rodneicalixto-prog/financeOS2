@@ -4,6 +4,12 @@ import { parseEmailWithAI, type AICredential } from './ai-parser.ts'
 import { lookupCNPJ } from './cnpj-lookup.ts'
 import { computeAllMathInsights } from './compute-insights.ts'
 
+// Teto de emails buscados por conta a cada sync, dentro da janela newer_than:30d.
+// Antes era 50 (só a 1ª página do Gmail). O trabalho caro (getEmailContent + IA)
+// roda só para emails NOVOS — os já vistos são pulados via fo_scanned_emails —,
+// então re-syncs ficam baratos e o cron (30min) completa backfills grandes.
+const MAX_EMAILS_PER_SYNC = 500
+
 interface SyncResult {
   user_id: string
   emails_found: number
@@ -149,7 +155,7 @@ export async function syncUserEmails(
       }
 
       // Buscar emails desta conexão
-      const messages = await searchEmails(accessToken, searchQuery, 50)
+      const messages = await searchEmails(accessToken, searchQuery, MAX_EMAILS_PER_SYNC)
       totalEmailsFound += messages.length
 
       // Processar cada email
