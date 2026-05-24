@@ -119,22 +119,13 @@ export async function syncUserEmails(
     .order('created_at', { ascending: true }) // ordem determinística (1ª que casa vence)
   const rules: EmailRule[] = (rulesData || []) as EmailRule[]
 
-  // Montar query de busca — sempre busca 30d mínimo (dedup via source_email_id)
-  const afterDate = 'newer_than:30d'
-
-  const keywords = [
-    // Bancos
-    'banco', 'nubank', 'itau', 'itaú', 'inter', 'bradesco', 'santander', 'c6bank', 'btg', 'caixa', 'bb',
-    // Transações bancárias
-    'transação', 'transferência', 'pix', 'débito', 'crédito', 'ted', 'doc',
-    // Recibos, faturas e cobranças
-    'receipt', 'recibo', 'invoice', 'fatura', 'nota fiscal', 'cobrança', 'pagamento', 'payment',
-    // Assinaturas e serviços
-    'assinatura', 'subscription', 'renovação', 'mensalidade',
-    // Plataformas de pagamento
-    'stripe', 'paypal', 'mercadopago', 'pagseguro', 'iugu', 'hotmart',
-  ]
-  const searchQuery = `${afterDate} (${keywords.join(' OR ')})`
+  // Busca TODOS os emails da caixa de entrada (todas as abas: Principal,
+  // Promoções, Atualizações, etc.) dos últimos 30 dias. NÃO filtramos mais por uma
+  // lista fixa de palavras-chave: ela perdia emails da aba Principal cujo banco/
+  // texto não estava na lista (só passavam os que batiam termos tipo "assinatura/
+  // pagamento", comuns em Promoções/Atualizações). O parser de IA (endurecido) é o
+  // filtro de precisão; o dedup via fo_scanned_emails mantém re-syncs baratos.
+  const searchQuery = 'in:inbox newer_than:30d'
 
   let totalEmailsFound = 0
   let totalEmailsProcessed = 0
