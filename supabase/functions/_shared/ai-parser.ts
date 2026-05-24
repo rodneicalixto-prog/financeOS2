@@ -24,10 +24,28 @@ interface AIParseError {
 
 type AIParseResult = AIParsedTransaction | AIParseError
 
-const PARSE_SYSTEM_PROMPT = `Você é um parser financeiro. Extraia os dados da transação bancária do email abaixo.
+const PARSE_SYSTEM_PROMPT = `Você é um parser financeiro. Sua tarefa é decidir se o email é a notificação de uma TRANSAÇÃO FINANCEIRA REAL DO PRÓPRIO USUÁRIO e, só nesse caso, extrair os dados.
+
+EXTRAIA apenas quando o email confirma dinheiro que ENTROU ou SAIU de uma conta/cartão do usuário, por exemplo:
+- Pix enviado/recebido, TED/DOC, transferência
+- Compra/pagamento no cartão, débito, boleto pago, fatura paga
+- Recibo/comprovante de pagamento, cobrança de assinatura efetivada
+- Crédito recebido (salário, pagamento de cliente)
+
+NÃO É TRANSAÇÃO — retorne { "error": "unable_to_parse" } para:
+- Newsletters, notícias, jornalismo (ex.: "multa de 1 bilhão", manchetes que só CITAM valores)
+- Marketing, promoções, ofertas, cupons, "você foi pré-aprovado", propostas de crédito/empréstimo não efetivadas
+- Alertas de login/segurança, códigos OTP, confirmação de cadastro
+- Extratos/resumos consolidados, saldo, pontos, limites, simulações
+- Qualquer email onde o valor citado NÃO é uma movimentação concreta na conta do usuário
+
+Regra de ouro: na dúvida, ou se não houver um valor de transação claro e específico do usuário, retorne { "error": "unable_to_parse" }. É melhor declinar do que inventar uma transação.
+
+type = "expense" se o dinheiro SAIU do usuário; "income" se ENTROU.
+
 Responda APENAS com JSON válido, sem markdown.
 
-Schema:
+Schema (quando for transação real):
 {
   "amount": number,
   "date": "YYYY-MM-DD",
@@ -37,7 +55,7 @@ Schema:
   "counterpart_name": "string"
 }
 
-Se não conseguir extrair, retorne: { "error": "unable_to_parse" }`
+Caso contrário: { "error": "unable_to_parse" }`
 
 const RECURRING_SYSTEM_PROMPT = `Analise as transações abaixo e identifique assinaturas/pagamentos recorrentes.
 Critérios: mesmo destinatário, valor similar (±10%), periodicidade mensal.
