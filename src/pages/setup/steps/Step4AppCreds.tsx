@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { supabase, isSupabaseConfigured } from '@/lib/supabase'
 import { setupConfig } from '../../../../setup.config'
 import { CredentialInput } from '../components/CredentialInput'
 import { OriginSuffixField } from '../components/OriginSuffixField'
@@ -36,9 +37,23 @@ export function Step4AppCreds({ appCreds, onChange, onNext, onBack }: Step4Props
       const body = Object.fromEntries(
         Object.entries(appCreds).filter(([, v]) => typeof v === 'string' && v.length > 0),
       )
+      // Pós-setup, /api/credentials exige JWT de owner (app_credentials_saved já
+      // existe). Anexa o token da sessão se houver; na first-run o gate é aberto
+      // e supabase ainda é stub, então só tentamos se já configurado.
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (isSupabaseConfigured) {
+        try {
+          const { data } = await supabase.auth.getSession()
+          if (data.session?.access_token) {
+            headers.Authorization = `Bearer ${data.session.access_token}`
+          }
+        } catch {
+          /* sem sessão — segue sem Authorization */
+        }
+      }
       const res = await fetch('/api/credentials', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(body),
       })
       const json = (await res.json()) as { success?: boolean; message?: string }
