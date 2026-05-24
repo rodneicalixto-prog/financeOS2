@@ -106,6 +106,71 @@ export function useCreateEmailRule() {
   })
 }
 
+// Regras sugeridas: classificam por direção (a IA extrai o valor; a regra força
+// receita/despesa). subject_pattern casa contra assunto + corpo do email.
+// category_id null → mantém a categorização automática; só força a direção.
+export const SUGGESTED_RULES: ReadonlyArray<{
+  name: string
+  subject_pattern: string
+  action: EmailRuleAction
+}> = [
+  // Receitas (dinheiro entrando)
+  { name: 'Pix recebido', subject_pattern: 'pix recebido', action: 'force_income' },
+  { name: 'Você recebeu (Pix)', subject_pattern: 'você recebeu', action: 'force_income' },
+  { name: 'Pagamento recebido', subject_pattern: 'pagamento recebido', action: 'force_income' },
+  { name: 'Transferência recebida', subject_pattern: 'transferência recebida', action: 'force_income' },
+  // Despesas (dinheiro saindo)
+  { name: 'Pix enviado', subject_pattern: 'pix enviado', action: 'force_expense' },
+  { name: 'Pagamento confirmado', subject_pattern: 'pagamento confirmado', action: 'force_expense' },
+  { name: 'Confirmação de pagamento', subject_pattern: 'confirmação de pagamento', action: 'force_expense' },
+  { name: 'Pagamento efetuado', subject_pattern: 'pagamento efetuado', action: 'force_expense' },
+  { name: 'Pagamento realizado', subject_pattern: 'pagamento realizado', action: 'force_expense' },
+  { name: 'Pagamento executado', subject_pattern: 'pagamento executado', action: 'force_expense' },
+  { name: 'Compra aprovada', subject_pattern: 'compra aprovada', action: 'force_expense' },
+  { name: 'Transferência enviada', subject_pattern: 'transferência enviada', action: 'force_expense' },
+]
+
+/** Insere o conjunto de regras sugeridas, pulando as que já existem (por padrão). */
+export function useSeedSuggestedRules() {
+  const queryClient = useQueryClient()
+  const { user } = useAuth()
+
+  return useMutation({
+    mutationFn: async (): Promise<{ inserted: number; skipped: number }> => {
+      if (!user) throw new Error('Não autenticado')
+      const { data: existing, error: readErr } = await supabase
+        .from('fo_email_rules')
+        .select('subject_pattern')
+        .eq('user_id', user.id)
+      if (readErr) throw readErr
+
+      const have = new Set(
+        (existing || []).map((r) => (r.subject_pattern || '').trim().toLowerCase()),
+      )
+      const toInsert = SUGGESTED_RULES.filter(
+        (r) => !have.has(r.subject_pattern.toLowerCase()),
+      ).map((r) => ({
+        user_id: user.id,
+        name: r.name,
+        sender_pattern: null,
+        subject_pattern: r.subject_pattern,
+        action: r.action,
+        category_id: null,
+        enabled: true,
+      }))
+
+      if (toInsert.length > 0) {
+        const { error } = await supabase.from('fo_email_rules').insert(toInsert)
+        if (error) throw error
+      }
+      return { inserted: toInsert.length, skipped: SUGGESTED_RULES.length - toInsert.length }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['email-rules'] })
+    },
+  })
+}
+
 export function useUpdateEmailRule() {
   const queryClient = useQueryClient()
   const { user } = useAuth()

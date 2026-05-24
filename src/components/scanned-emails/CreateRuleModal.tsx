@@ -92,7 +92,8 @@ export function CreateRuleModal({
     <Modal open={open} onClose={onClose} title="Criar regra de sync" className="max-w-lg">
       <form onSubmit={handleSubmit} className="space-y-4">
         <p className="text-sm text-slate-400">
-          Regras se aplicam a futuras sincronizações. Defina por remetente, assunto ou os dois (precisam casar ambos).
+          Regras se aplicam a futuras sincronizações. O padrão de assunto casa também contra o
+          conteúdo do email. Defina por remetente, assunto/conteúdo ou os dois (precisam casar ambos).
         </p>
 
         <Input
@@ -110,10 +111,10 @@ export function CreateRuleModal({
         />
 
         <Input
-          label="Assunto contém (opcional)"
+          label="Assunto ou conteúdo contém (opcional)"
           value={subjectPattern}
           onChange={(e) => setSubjectPattern(e.target.value)}
-          placeholder="ex: fatura"
+          placeholder="ex: pix recebido, pagamento confirmado, fatura"
         />
 
         <div>

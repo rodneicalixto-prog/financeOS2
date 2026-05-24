@@ -42,9 +42,11 @@ interface EmailRule {
   match_count: number
 }
 
-function matchRule(rules: EmailRule[], from: string, subject: string): EmailRule | null {
+function matchRule(rules: EmailRule[], from: string, subject: string, body: string): EmailRule | null {
   const f = (from || '').toLowerCase()
-  const s = (subject || '').toLowerCase()
+  // subject_pattern casa contra ASSUNTO + CORPO: notificações bancárias trazem
+  // "pix enviado", "pagamento recebido" etc. no corpo, raramente no assunto.
+  const s = `${subject || ''}\n${body || ''}`.toLowerCase()
   for (const r of rules) {
     const hasSender = !!r.sender_pattern
     const hasSubject = !!r.subject_pattern
@@ -114,6 +116,7 @@ export async function syncUserEmails(
     .select('id, sender_pattern, subject_pattern, action, category_id, match_count')
     .eq('user_id', userId)
     .eq('enabled', true)
+    .order('created_at', { ascending: true }) // ordem determinística (1ª que casa vence)
   const rules: EmailRule[] = (rulesData || []) as EmailRule[]
 
   // Montar query de busca — sempre busca 30d mínimo (dedup via source_email_id)
@@ -203,7 +206,7 @@ export async function syncUserEmails(
           }
 
           // Match contra regras (Nível 2)
-          const matchedRule = matchRule(rules, emailContent.from, emailContent.subject)
+          const matchedRule = matchRule(rules, emailContent.from, emailContent.subject, emailContent.body)
 
           if (matchedRule?.action === 'ignore') {
             await supabaseAdmin.from('fo_scanned_emails').insert({
