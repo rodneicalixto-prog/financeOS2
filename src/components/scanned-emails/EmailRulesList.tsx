@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Power, Zap, Sparkles } from 'lucide-react'
+import { Plus, Trash2, Power, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -7,7 +7,6 @@ import {
   useEmailRules,
   useDeleteEmailRule,
   useUpdateEmailRule,
-  useSeedSuggestedRules,
   type EmailRule,
 } from '@/hooks/useEmailRules'
 import { useCategories } from '@/hooks/useCategories'
@@ -31,22 +30,7 @@ export function EmailRulesList() {
   const { data: categories } = useCategories()
   const deleteRule = useDeleteEmailRule()
   const updateRule = useUpdateEmailRule()
-  const seedRules = useSeedSuggestedRules()
   const [createOpen, setCreateOpen] = useState(false)
-  const [seedMsg, setSeedMsg] = useState<string | null>(null)
-
-  function addSuggested() {
-    setSeedMsg(null)
-    seedRules.mutate(undefined, {
-      onSuccess: ({ inserted, skipped }) =>
-        setSeedMsg(
-          inserted === 0
-            ? 'Todas as regras sugeridas já estavam adicionadas.'
-            : `${inserted} regra${inserted === 1 ? '' : 's'} sugerida${inserted === 1 ? '' : 's'} adicionada${inserted === 1 ? '' : 's'}${skipped ? ` (${skipped} já existia${skipped === 1 ? '' : 'm'})` : ''}.`,
-        ),
-      onError: (e) => setSeedMsg(e instanceof Error ? e.message : 'Erro ao adicionar regras.'),
-    })
-  }
 
   function categoryName(id: string | null) {
     if (!id) return null
@@ -63,21 +47,11 @@ export function EmailRulesList() {
             Receita/Despesa só corrige a direção de emails que a IA conseguiu parsear.
           </p>
         </div>
-        <div className="flex flex-shrink-0 gap-2">
-          <Button size="sm" variant="secondary" onClick={addSuggested} loading={seedRules.isPending}>
-            <Sparkles className="h-4 w-4" />
-            Sugeridas
-          </Button>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Nova regra
-          </Button>
-        </div>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Nova regra
+        </Button>
       </div>
-
-      {seedMsg && (
-        <p className="rounded-lg bg-accent-blue/10 px-3 py-2 text-sm text-accent-blue">{seedMsg}</p>
-      )}
 
       {isLoading ? (
         <div className="space-y-2">
