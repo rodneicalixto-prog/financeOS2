@@ -107,6 +107,17 @@ export interface SyncLog {
   errors: Record<string, unknown>[] | null
 }
 
+export interface BrandingSettings {
+  id: true
+  app_name: string
+  logo_url: string | null
+  favicon_url: string | null
+  primary_color: string
+  theme_mode: 'dark' | 'light'
+  updated_by: string | null
+  updated_at: string
+}
+
 export interface Alert {
   id: string
   user_id: string

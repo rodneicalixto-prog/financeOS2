@@ -10,6 +10,7 @@ import {
   Mail,
 } from 'lucide-react'
 import { useCurrentUser } from '@/hooks/useCurrentUser'
+import { useBranding, DEFAULT_BRANDING } from '@/hooks/useBranding'
 
 interface SidebarProps {
   open: boolean
@@ -28,6 +29,7 @@ const tailNavItems = [{ to: '/configuracoes', label: 'Configurações', icon: Se
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const { data: currentUser } = useCurrentUser()
+  const { data: branding = DEFAULT_BRANDING } = useBranding()
   const navItems = [
     ...baseNavItems,
     ...(currentUser?.role === 'owner' ? ownerNavItems : []),
@@ -52,11 +54,22 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       >
         {/* Logo */}
         <div className="flex h-16 items-center justify-between px-6 border-b border-[rgba(59,130,246,0.08)]">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#1E3A8A] to-[#3B82F6] shadow-[0_0_20px_rgba(59,130,246,0.35)]">
-              <DollarSign className="h-5 w-5 text-white" />
-            </div>
-            <span className="text-lg font-bold tracking-tight text-white">FinanceOS</span>
+          <div className="flex items-center gap-2.5 min-w-0">
+            {branding.logo_url ? (
+              <img
+                src={branding.logo_url}
+                alt={branding.app_name}
+                className="h-9 w-9 shrink-0 rounded-xl object-contain"
+              />
+            ) : (
+              <div
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-[0_0_20px_rgba(var(--brand-primary-rgb),0.35)]"
+                style={{ background: 'linear-gradient(135deg, var(--brand-primary-dark), var(--brand-primary))' }}
+              >
+                <DollarSign className="h-5 w-5 text-white" />
+              </div>
+            )}
+            <span className="truncate text-lg font-bold tracking-tight text-white">{branding.app_name}</span>
           </div>
           <button
             onClick={onClose}
@@ -90,7 +103,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
         {/* Footer */}
         <div className="border-t border-[rgba(59,130,246,0.08)] px-6 py-4">
-          <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">FinanceOS v1.0</p>
+          <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-500">{branding.app_name} v1.0</p>
         </div>
       </aside>
     </>

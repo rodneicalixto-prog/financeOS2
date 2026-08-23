@@ -7,8 +7,9 @@ import { CategoriesSettings } from '@/components/settings/CategoriesSettings'
 import { TagsSettings } from '@/components/settings/TagsSettings'
 import { BudgetsSettings } from '@/components/settings/BudgetsSettings'
 import { ExportSettings } from '@/components/settings/ExportSettings'
+import { BrandingSettings } from '@/components/settings/BrandingSettings'
 
-type SettingsTab = 'contas' | 'gmail' | 'ia' | 'categorias' | 'tags' | 'orcamentos' | 'exportacao'
+type SettingsTab = 'contas' | 'gmail' | 'ia' | 'categorias' | 'tags' | 'orcamentos' | 'exportacao' | 'marca'
 
 const tabs: { key: SettingsTab; label: string }[] = [
   { key: 'contas', label: 'Contas' },
@@ -18,9 +19,10 @@ const tabs: { key: SettingsTab; label: string }[] = [
   { key: 'tags', label: 'Tags' },
   { key: 'orcamentos', label: 'Orçamentos' },
   { key: 'exportacao', label: 'Exportação' },
+  { key: 'marca', label: 'Marca' },
 ]
 
-const validTabs: SettingsTab[] = ['contas', 'gmail', 'ia', 'categorias', 'tags', 'orcamentos', 'exportacao']
+const validTabs: SettingsTab[] = ['contas', 'gmail', 'ia', 'categorias', 'tags', 'orcamentos', 'exportacao', 'marca']
 
 export function SettingsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -68,6 +70,7 @@ export function SettingsPage() {
         {activeTab === 'tags' && <TagsSettings />}
         {activeTab === 'orcamentos' && <BudgetsSettings />}
         {activeTab === 'exportacao' && <ExportSettings />}
+        {activeTab === 'marca' && <BrandingSettings />}
       </div>
     </div>
   )

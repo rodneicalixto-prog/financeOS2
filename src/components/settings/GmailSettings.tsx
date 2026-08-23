@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
-import { Mail, RefreshCw, CheckCircle, Sparkles, Wallet, Link2, ArrowRight, HelpCircle, Unlink, Plus, Trash2, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownLeft, Repeat, Inbox } from 'lucide-react'
+import { Mail, RefreshCw, CheckCircle, Sparkles, Wallet, Link2, ArrowRight, HelpCircle, Unlink, Plus, Trash2, ChevronDown, ChevronRight, ArrowUpRight, ArrowDownLeft, Repeat, Inbox, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 import { Modal } from '@/components/ui/Modal'
@@ -22,6 +22,7 @@ export function GmailSettings() {
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>([])
   const [syncing, setSyncing] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [syncError, setSyncError] = useState<string | null>(null)
   const [helpOpen, setHelpOpen] = useState(false)
   const [disconnectingId, setDisconnectingId] = useState<string | null>(null)
   const [confirmDisconnectId, setConfirmDisconnectId] = useState<string | null>(null)
@@ -85,11 +86,37 @@ export function GmailSettings() {
 
   async function handleSync() {
     setSyncing(true)
+    setSyncError(null)
     try {
-      await supabase.functions.invoke('sync-emails')
+      const { data, error } = await supabase.functions.invoke<{
+        status?: 'success' | 'partial' | 'failed'
+        errors?: number
+        emails_found?: number
+        error?: string
+      }>('sync-emails')
+
+      if (error) {
+        const ctx = (error as { context?: Response }).context
+        let message = error.message
+        if (ctx && typeof ctx.text === 'function') {
+          try {
+            const raw = await ctx.text()
+            const parsed = JSON.parse(raw) as { error?: string }
+            message = parsed.error || raw || message
+          } catch {
+            // corpo não era JSON, mantém error.message
+          }
+        }
+        setSyncError(message)
+      } else if (data?.error) {
+        setSyncError(data.error)
+      } else if (data?.status === 'failed') {
+        setSyncError('A sincronização rodou mas falhou em todos os emails. Veja o histórico abaixo para detalhes.')
+      }
+
       await loadConnections()
-    } catch {
-      // handled silently
+    } catch (err) {
+      setSyncError(err instanceof Error ? err.message : 'Erro desconhecido ao sincronizar.')
     } finally {
       setSyncing(false)
     }
@@ -182,6 +209,16 @@ export function GmailSettings() {
           />
         </div>
       </Card>
+
+      {syncError && (
+        <div className="flex items-start gap-2 rounded-lg border border-accent-red/30 bg-accent-red/5 p-3 text-sm text-accent-red">
+          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Falha ao sincronizar</p>
+            <p className="mt-0.5 text-accent-red/80">{syncError}</p>
+          </div>
+        </div>
+      )}
 
       {/* Emails conectados */}
       <Card>
@@ -285,24 +322,34 @@ export function GmailSettings() {
         <Card>
           <h4 className="mb-3 text-sm font-medium text-slate-400">Histórico de Sincronização</h4>
           <div className="space-y-2">
-            {syncLogs.map((log) => (
-              <div key={log.id} className="flex items-center gap-3 text-sm">
-                <span
-                  className={`h-2 w-2 rounded-full ${
-                    log.status === 'success'
-                      ? 'bg-accent-green'
-                      : log.status === 'partial'
-                        ? 'bg-accent-yellow'
-                        : 'bg-accent-red'
-                  }`}
-                />
-                <span className="text-slate-300">{formatDate(log.started_at)}</span>
-                <span className="text-slate-500">
-                  {log.emails_processed}/{log.emails_found} emails
-                </span>
-                <span className="text-xs text-slate-500 capitalize">{log.status}</span>
-              </div>
-            ))}
+            {syncLogs.map((log) => {
+              const firstError = log.errors?.find((e) => typeof e.error === 'string') as
+                | { error?: string }
+                | undefined
+              return (
+                <div key={log.id} className="text-sm">
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`h-2 w-2 rounded-full ${
+                        log.status === 'success'
+                          ? 'bg-accent-green'
+                          : log.status === 'partial'
+                            ? 'bg-accent-yellow'
+                            : 'bg-accent-red'
+                      }`}
+                    />
+                    <span className="text-slate-300">{formatDate(log.started_at)}</span>
+                    <span className="text-slate-500">
+                      {log.emails_processed}/{log.emails_found} emails
+                    </span>
+                    <span className="text-xs text-slate-500 capitalize">{log.status}</span>
+                  </div>
+                  {log.status !== 'success' && firstError?.error && (
+                    <p className="ml-5 mt-0.5 text-xs text-accent-red/80">{firstError.error}</p>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </Card>
       )}
