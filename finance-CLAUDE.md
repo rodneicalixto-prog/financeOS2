@@ -1,5 +1,9 @@
 # FinanceOS — CLAUDE.md
 
+> Para "onde estamos agora" — inclusive um item crítico de segurança
+> nunca validado (`docs/RECOVERY_PENDING.md`) — ver `STATUS.md`. Este
+> arquivo duplica `docs/ARCHITECTURE.md`; ainda não consolidado num só.
+
 ## Visão Geral
 
 FinanceOS é uma ferramenta de relatório financeiro pessoal para empreendedores brasileiros. O sistema lê notificações de transações bancárias recebidas por email (Gmail), extrai dados via AI, categoriza automaticamente por CNPJ e exibe um dashboard com métricas financeiras. Uso interno da Agentise.
